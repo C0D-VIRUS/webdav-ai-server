@@ -62,15 +62,11 @@ def get_or_create_session(ip):
 
 
 def delete_session(session_id):
-    """Remove a session folder from disk and registry."""
+    """Remove a session folder registry (but keep files on disk)."""
     with _sessions_lock:
         info = _sessions.pop(session_id, None)
-    if info and os.path.exists(info["path"]):
-        try:
-            shutil.rmtree(info["path"])
-            print(f"[SESSION] Deleted {session_id}")
-        except Exception as e:
-            print(f"[SESSION] Error deleting {session_id}: {e}")
+    if info:
+        print(f"[SESSION] Expired {session_id} from memory, kept on disk.")
 
 
 def resolve_session(path, ip=None):
@@ -127,20 +123,9 @@ def cleanup_loop(timeout=None):
         for sid in expired:
             delete_session(sid)
 
-        # Cleanup orphaned/old folders left on disk
-        if os.path.exists(WATCH_FOLDER):
-            for item in os.listdir(WATCH_FOLDER):
-                if item not in active_sids:
-                    # ONLY delete if it's an auto-generated sandboxed dav_ session
-                    if item.startswith("dav_"):
-                        p = os.path.join(WATCH_FOLDER, item)
-                        if os.path.isdir(p):
-                            try:
-                                shutil.rmtree(p)
-                                print(f"[CLEANUP] Removed old auto-session: {item}")
-                            except Exception:
-                                pass
-
+        # Cleanup orphaned/old folders left on disk is disabled
+        # so that users can keep their files across sessions.
+        
         time.sleep(60)
 
 
